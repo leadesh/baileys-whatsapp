@@ -48,6 +48,7 @@ const Messages = () => {
   const { data: oldMessages } = useQuery({
     queryKey: ["Messages"],
     queryFn: allMessages,
+    refetchOnWindowFocus: false,
   });
 
   const { mutate: addTag } = useMutation({
