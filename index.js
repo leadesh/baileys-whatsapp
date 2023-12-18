@@ -38,6 +38,8 @@ const mongoClient = new MongoClient(process.env.mongodb_url, {
 });
 mongoClient.connect().then(() => console.log("mongoClient connected"));
 
+const port = process.env.PORT || 3000;
+
 const sock = {};
 
 // Function to set a global variable for a specific ID
@@ -323,6 +325,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-server.listen(3000, () => {
+server.listen(port, () => {
   console.log("listening on *:3000");
 });
