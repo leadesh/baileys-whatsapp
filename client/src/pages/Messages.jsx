@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
-import { allMessages, delTag, newTag, queryClient } from "../utils/http";
+import { allMessages, delTag, newTag } from "../utils/http";
 import socket from "../connection/socket";
 import Message from "../components/Message";
 import { useNavigate } from "react-router-dom";
@@ -56,7 +56,6 @@ const Messages = () => {
     onSuccess: (data) => {
       dispatch(signInSuccess(data));
       tagRef.current.value = "";
-      queryClient.invalidateQueries(["Messages"]);
     },
   });
 
@@ -64,7 +63,6 @@ const Messages = () => {
     mutationFn: delTag,
     onSuccess: (data) => {
       dispatch(signInSuccess(data));
-      queryClient.invalidateQueries(["Messages"]);
     },
   });
 
