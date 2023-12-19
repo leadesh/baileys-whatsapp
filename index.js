@@ -47,9 +47,6 @@ function setSock(id, value) {
   sock[id] = value;
 }
 
-let groupMessageEventListener;
-let connectionUpdateListener;
-
 async function markedLogged() {
   await User.updateMany({}, { $set: { isLogged: false } });
 }
@@ -91,8 +88,8 @@ async function connectionLogic(id, socket, isError) {
       });
       setSock(id, sock);
     } else {
-      sock[id].ev.off("messages.upsert", groupMessageEventListener);
-      sock[id].ev.off("connection.update", connectionUpdateListener);
+      sock[id].ev.removeAllListeners("messages.upsert");
+      sock[id].ev.removeAllListeners("connection.update");
     }
   } catch (error) {
     console.error(error);
@@ -102,7 +99,7 @@ async function connectionLogic(id, socket, isError) {
     connectionLogic(id, socket, true);
   }
 
-  connectionUpdateListener = async (update) => {
+  let connectionUpdateListener = async (update) => {
     const { connection, lastDisconnect } = update;
     try {
       if (!connection && update?.qr) {
@@ -161,7 +158,7 @@ async function connectionLogic(id, socket, isError) {
     }
   };
 
-  groupMessageEventListener = async (messageInfoUpsert) => {
+  let groupMessageEventListener = async (messageInfoUpsert) => {
     if (
       messageInfoUpsert.messages[0].key.remoteJid.split("@")[1] === "g.us" &&
       messageInfoUpsert.messages[0].message?.conversation
