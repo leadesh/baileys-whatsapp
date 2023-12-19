@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { DisconnectReason } = require("@whiskeysockets/baileys");
+const { DisconnectReason, Browsers } = require("@whiskeysockets/baileys");
 const makeWASocket = require("@whiskeysockets/baileys").default;
 const express = require("express");
 const app = express();
@@ -50,6 +50,12 @@ function setSock(id, value) {
 let groupMessageEventListener;
 let connectionUpdateListener;
 
+async function markedLogged() {
+  await User.updateMany({}, { $set: { isLogged: false } });
+}
+
+markedLogged();
+
 async function generateQRCode(data) {
   return new Promise((resolve, reject) => {
     qrCode.toDataURL(data, (err, url) => {
@@ -92,49 +98,66 @@ async function connectionLogic(id, socket, isError) {
     console.error(error);
   }
 
+  if (!sock[id]) {
+    connectionLogic(id, socket, true);
+  }
+
   connectionUpdateListener = async (update) => {
     const { connection, lastDisconnect } = update;
-    if (!connection && update?.qr) {
-      const qrCodeDataURL = await generateQRCode(update.qr);
-      console.log("QR created");
-      socket.emit("qrCode", qrCodeDataURL);
-    }
+    try {
+      if (!connection && update?.qr) {
+        const qrCodeDataURL = await generateQRCode(update.qr);
+        console.log("QR created");
+        socket.emit("qrCode", qrCodeDataURL);
+      }
 
-    if (connection === "close") {
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !==
-        DisconnectReason.loggedOut;
-      console.log(
-        "connection closed due to ",
-        lastDisconnect.error,
-        ", reconnecting ",
-        shouldReconnect
-      );
+      if (connection === "close") {
+        const shouldReconnect =
+          lastDisconnect?.error?.output?.statusCode !==
+          DisconnectReason.loggedOut;
+        console.log(
+          "connection closed due to ",
+          lastDisconnect.error,
+          ", reconnecting ",
+          shouldReconnect
+        );
 
-      if (
-        lastDisconnect.error?.output?.statusCode === DisconnectReason.loggedOut
-      ) {
-        console.log("User logged out Rereun the connection");
-        // Handle user logout, perform cleanup, or redirect as needed
-        await mongoClient.db("whatsapp_api").dropCollection(`auth_info_${id}`);
-        user.isLogged = false;
+        if (
+          lastDisconnect.error?.output?.statusCode ===
+          DisconnectReason.loggedOut
+        ) {
+          console.log("User logged out Rereun the connection");
+          // Handle user logout, perform cleanup, or redirect as needed
+          await mongoClient
+            .db("whatsapp_api")
+            .dropCollection(`auth_info_${id}`);
+          user.isLogged = false;
+          await user.save();
+          socket.emit("user disconnected");
+        }
+
+        if (lastDisconnect.error?.output?.statusCode === 408) {
+          user.isLogged = false;
+          await user.save();
+          socket.emit("user disconnected");
+        }
+
+        //   if (lastDisconnect.error?.output?.statusCode === 440) {
+        //     await mongoClient.db("whatsapp_api").dropCollection(`auth_info_${id}`);
+        //     connectionLogic(id, socket);
+        //   }
+
+        if (shouldReconnect) {
+          connectionLogic(id, socket, true);
+        }
+      } else if (connection === "open") {
+        console.log("opened connection");
+        user.isLogged = true;
         await user.save();
-        socket.emit("user disconnected");
+        socket.emit("user connected");
       }
-
-      //   if (lastDisconnect.error?.output?.statusCode === 440) {
-      //     await mongoClient.db("whatsapp_api").dropCollection(`auth_info_${id}`);
-      //     connectionLogic(id, socket);
-      //   }
-
-      if (shouldReconnect) {
-        connectionLogic(id, socket, true);
-      }
-    } else if (connection === "open") {
-      console.log("opened connection");
-      user.isLogged = true;
-      await user.save();
-      socket.emit("user connected");
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -241,13 +264,17 @@ app.post("/api/signin", async (req, res, next) => {
   }
 });
 
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("jwt");
+  res.status(200).json("Logout success");
+});
+
 app.get("/api/refreshMessages", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
     const chatsCollection = mongoClient
       .db("whatsapp_chats")
       .collection(`all_chats_${data.id}`);
-    console.log(sock);
 
     const messages = await chatsCollection
       .find({})
@@ -303,7 +330,8 @@ app.post("/api/tag/del", verifyAccessToken, async (req, res, next) => {
 // });
 
 process.on("exit", async () => {
-  User.updateMany({}, { isLogged: false });
+  console.log("App exiting...");
+  await User.updateMany({}, { $set: { isLogged: false } });
 });
 
 io.on("connection", (socket) => {

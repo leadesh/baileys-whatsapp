@@ -9,6 +9,7 @@ import { CiSquarePlus } from "react-icons/ci";
 import { useDispatch, useSelector } from "react-redux";
 import Tag from "../components/Tag";
 import { signInSuccess } from "../redux/user/userSlice";
+import axios from "axios";
 
 const Messages = () => {
   //   const { data, isLoading } = useQuery({
@@ -24,7 +25,6 @@ const Messages = () => {
 
   useEffect(() => {
     if (localStorage.getItem("firstLoadDone") === null) {
-      // If it's the first load, set the flag in local storage to true and reload the page
       localStorage.setItem("firstLoadDone", 1);
     } else {
       socket.emit("whatsapp connect", currentUser._id);
@@ -34,8 +34,9 @@ const Messages = () => {
       setData((messages) => [message, ...messages]);
     });
 
-    socket.on("user disconnected", () => {
-      navigate("/authcheck", { replace: true });
+    socket.on("user disconnected", async () => {
+      const { data } = await axios.post("/api/logout");
+      navigate("/", { replace: true });
     });
 
     return () => {
