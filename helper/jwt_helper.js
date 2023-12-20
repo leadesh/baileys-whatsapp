@@ -41,7 +41,7 @@ exports.verifyAccessToken = (req, res, next) => {
         }
       })
       .catch((err) => {
-        next({ status: 500, message: err.message });
+        next({ status: 500, message: err });
       });
   });
 };

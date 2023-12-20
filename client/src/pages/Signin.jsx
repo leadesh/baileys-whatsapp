@@ -6,7 +6,7 @@ import { signInSuccess } from "../redux/user/userSlice";
 import { useDispatch } from "react-redux";
 
 const SignIn = () => {
-  const [user, setUser] = useState({ email: "", password: "" });
+  const [user, setUser] = useState({ number: "", password: "" });
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -41,8 +41,8 @@ const SignIn = () => {
           type='text'
           className='p-3 rounded-lg border'
           onChange={formInputChangeHandler}
-          id='email'
-          placeholder='Email'
+          id='number'
+          placeholder='Phone Number'
         />
         <input
           type='password'
@@ -51,14 +51,19 @@ const SignIn = () => {
           className='p-3 rounded-lg border'
           placeholder='Password'
         />
-        <button className='p-3 rounded-[32px] text-white uppercase font-bold disabled:opacity-80 transition duration-300 shadow hover:shadow-lg hover:opacity-95 bg-teal-600 hover:bg-teal-700'>
+        <button
+          disabled={isPending}
+          className='p-3 rounded-[32px] text-white uppercase font-bold disabled:opacity-80 transition duration-300 shadow hover:shadow-lg hover:opacity-95 bg-teal-600 hover:bg-teal-700'
+        >
           Submit
         </button>
       </form>
       <div className='flex gap-2 mt-2'>
         <p>{"Don't have an account?"}</p>
         <Link to={"/signup"}>
-          <span className='text-blue-700'>Sign up</span>
+          <span className='text-blue-700'>
+            {isPending ? "Signing up..." : "Sign up"}
+          </span>
         </Link>
       </div>
     </div>

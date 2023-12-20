@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import socket from "../connection/socket";
+import axios from "axios";
 
 const QRScan = () => {
   const [qr, setQR] = useState(null);
@@ -15,6 +16,11 @@ const QRScan = () => {
     socket.on("qrCode", (qrCodeDataURL) => {
       setQR(qrCodeDataURL);
       setPresentState("scan-qr");
+    });
+
+    socket.on("user disconnected", async () => {
+      const { data } = await axios.post("/api/logout");
+      navigate("/", { replace: true });
     });
 
     socket.on("user connected", () => {
@@ -41,8 +47,8 @@ const QRScan = () => {
         <h1 className='text-center mt-16'>Checking User status...</h1>
       )}
       <div className='flex flex-col text-lg items-center font-bold justify-center gap-1 mt-4'>
-        <p>{currentUser.username}</p>
-        <p>{currentUser.email}</p>
+        <p>{currentUser.name}</p>
+        <p>{currentUser.number}</p>
       </div>
     </>
   );

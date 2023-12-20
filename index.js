@@ -161,11 +161,17 @@ async function connectionLogic(id, socket, isError) {
   let groupMessageEventListener = async (messageInfoUpsert) => {
     if (
       messageInfoUpsert.messages[0].key.remoteJid.split("@")[1] === "g.us" &&
-      messageInfoUpsert.messages[0].message?.conversation
+      (messageInfoUpsert.messages[0].message?.conversation ||
+        messageInfoUpsert.messages[0].message?.extendedTextMessage?.text)
     ) {
       const user = await User.findById(id);
       const tags = user.tags;
-      const newMessage = messageInfoUpsert.messages[0].message?.conversation;
+      let newMessage = messageInfoUpsert.messages[0].message?.conversation;
+      if (!newMessage) {
+        newMessage =
+          messageInfoUpsert.messages[0].message?.extendedTextMessage?.text +
+          messageInfoUpsert.messages[0].message?.extendedTextMessage?.title;
+      }
       const isRequiredMessage =
         tags.length === 0
           ? true
@@ -180,7 +186,14 @@ async function connectionLogic(id, socket, isError) {
             }, false);
       console.log(isRequiredMessage);
       const newGrpMessage = {
-        conversation: messageInfoUpsert.messages[0].message?.conversation,
+        ...(messageInfoUpsert.messages[0].message?.extendedTextMessage
+          ?.title && {
+          title:
+            messageInfoUpsert.messages[0].message?.extendedTextMessage?.title,
+        }),
+        conversation:
+          messageInfoUpsert.messages[0].message?.conversation ||
+          messageInfoUpsert.messages[0].message?.extendedTextMessage?.text,
         username: messageInfoUpsert.messages[0].pushName,
         phoneNumber: messageInfoUpsert.messages[0].key.participant
           .split("@")[0]
@@ -215,12 +228,12 @@ app.get("/", (req, res) => {
 app.post("/api/signup", async (req, res, next) => {
   try {
     await createSignUpValidation.validateAsync(req.body);
-    const { username, password, email } = req.body;
+    const { name, password, number } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword, email });
+    const newUser = new User({ name, password: hashedPassword, number });
     await newUser.save();
     const token = await signAccessToken(newUser.id);
-    const maxAgeInSeconds = 10 * 24 * 60 * 60;
+    const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
     res.cookie("jwt", token, {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
@@ -243,13 +256,13 @@ app.get("/api/getMe", verifyAccessToken, async (req, res, next) => {
 app.post("/api/signin", async (req, res, next) => {
   try {
     await createSignInValidation.validateAsync(req.body);
-    const { email, password } = req.body;
-    console.log(email, password);
-    const validUser = await User.checkUser(email, password);
+    const { number, password } = req.body;
+    console.log(number, password);
+    const validUser = await User.checkUser(number, password);
 
-    if (!validUser) throw new MyError("Invalid email or password");
+    if (!validUser) throw new MyError("Invalid phone number or password");
     const token = await signAccessToken(validUser.id);
-    const maxAgeInSeconds = 10 * 24 * 60 * 60;
+    const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
     res.cookie("jwt", token, {
       httpOnly: true,
       maxAge: maxAgeInSeconds,

@@ -33,6 +33,16 @@ export const allMessages = async () => {
   }
 };
 
+export const logout = async () => {
+  try {
+    const response = await axios.post("/api/logout");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    throw error;
+  }
+};
+
 export const newTag = async ({ formData }) => {
   const response = await axios.post("/api/tag/add", formData);
   return response.data;

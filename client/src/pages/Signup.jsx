@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import { signInSuccess } from "../redux/user/userSlice";
 
 const Signup = () => {
-  const [user, setUser] = useState({ username: "", password: "", email: "" });
+  const [user, setUser] = useState({ name: "", password: "", number: "" });
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -39,18 +39,18 @@ const Signup = () => {
         className='flex flex-col gap-3 mt-8'
       >
         <input
-          id='username'
+          id='name'
           onChange={formInputChangeHandler}
           type='text'
           className='p-3 rounded-lg border'
-          placeholder='Username'
+          placeholder='Name'
         />
         <input
           onChange={formInputChangeHandler}
-          id='email'
+          id='number'
           type='text'
           className='p-3 rounded-lg border'
-          placeholder='Email'
+          placeholder='Phone Number'
         />
         <input
           onChange={formInputChangeHandler}

@@ -2,22 +2,18 @@ const { Schema, model } = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const userSchema = new Schema({
-  username: {
+  name: {
     type: String,
     reuired: true,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: true,
     unique: true,
   },
   password: {
     type: String,
     required: true,
   },
-  phoneNumber: {
-    type: String,
+  number: {
+    type: Number,
+    required: true,
   },
   isLogged: {
     type: Boolean,
@@ -29,8 +25,8 @@ const userSchema = new Schema({
   },
 });
 
-userSchema.statics.checkUser = async function (email, password) {
-  const foundUser = await this.findOne({ email: email });
+userSchema.statics.checkUser = async function (number, password) {
+  const foundUser = await this.findOne({ number: number });
   let isValid = false;
   if (foundUser) {
     isValid = await bcrypt.compare(password, foundUser.password);

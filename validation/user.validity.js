@@ -1,12 +1,12 @@
 const Joi = require("joi");
 
 exports.createSignUpValidation = Joi.object({
-  username: Joi.string().required().min(2),
-  email: Joi.string().email().required(),
+  name: Joi.string().required().min(2),
+  number: Joi.number().min(10).required(),
   password: Joi.string().min(6).required(),
 });
 
 exports.createSignInValidation = Joi.object({
-  email: Joi.string().email().required(),
+  number: Joi.string().required().min(2),
   password: Joi.string().min(6).required(),
 });

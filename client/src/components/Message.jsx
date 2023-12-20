@@ -18,6 +18,7 @@ const Message = (props) => {
         <h1>{message.phoneNumber}</h1>
       </div>
       <div>
+        <h1>{message.title}</h1>
         <h1>{message.conversation}</h1>
         <h1>{formattedDate}</h1>
       </div>
