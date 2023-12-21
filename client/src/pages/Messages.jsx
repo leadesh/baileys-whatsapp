@@ -36,7 +36,7 @@ const Messages = () => {
 
     socket.on("user disconnected", async () => {
       const { data } = await axios.post("/api/logout");
-      dispatch(signOutSuccess);
+      dispatch(signOutSuccess());
       navigate("/", { replace: true });
     });
 

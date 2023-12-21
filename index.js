@@ -85,6 +85,7 @@ async function connectionLogic(id, socket, isError) {
       let sock = makeWASocket({
         printQRInTerminal: true,
         auth: state,
+        defaultQueryTimeoutMs: undefined,
       });
       setSock(id, sock);
     } else {
@@ -97,6 +98,7 @@ async function connectionLogic(id, socket, isError) {
 
   if (!sock[id]) {
     connectionLogic(id, socket, true);
+    console.log(user.isLogged, id, "retrying connection");
   }
 
   let connectionUpdateListener = async (update) => {
@@ -111,7 +113,9 @@ async function connectionLogic(id, socket, isError) {
       if (connection === "close") {
         const shouldReconnect =
           lastDisconnect?.error?.output?.statusCode !==
-          DisconnectReason.loggedOut;
+            DisconnectReason.loggedOut &&
+          lastDisconnect?.error?.output?.payload?.message !==
+            "QR refs attempts ended";
         console.log(
           "connection closed due to ",
           lastDisconnect.error,
@@ -128,16 +132,30 @@ async function connectionLogic(id, socket, isError) {
           await mongoClient
             .db("whatsapp_api")
             .dropCollection(`auth_info_${id}`);
-          user.isLogged = false;
-          await user.save();
-          socket.emit("user disconnected");
+          try {
+            user.isLogged = false;
+            await user.save();
+            socket.emit("user disconnected");
+            delete sock[id];
+          } catch (error) {
+            console.error(error);
+          }
         }
 
-        if (lastDisconnect.error?.output?.statusCode === 408) {
-          user.isLogged = false;
-          await user.save();
-          socket.emit("user disconnected");
+        if (
+          lastDisconnect?.error?.output?.payload?.message ===
+          "QR refs attempts ended"
+        ) {
+          socket.emit("request timed out");
+          console.log("Request timed out");
         }
+
+        // if (
+        //   lastDisconnect.error?.output?.statusCode === DisconnectReason.timedOut
+        // ) {
+        //   connectionLogic(id, socket, true);
+        // }
+        // console.log(DisconnectReason);
 
         //   if (lastDisconnect.error?.output?.statusCode === 440) {
         //     await mongoClient.db("whatsapp_api").dropCollection(`auth_info_${id}`);
@@ -159,55 +177,59 @@ async function connectionLogic(id, socket, isError) {
   };
 
   let groupMessageEventListener = async (messageInfoUpsert) => {
-    if (
-      messageInfoUpsert.messages[0].key.remoteJid.split("@")[1] === "g.us" &&
-      (messageInfoUpsert.messages[0].message?.conversation ||
-        messageInfoUpsert.messages[0].message?.extendedTextMessage?.text)
-    ) {
-      const user = await User.findById(id);
-      const tags = user.tags;
-      let newMessage = messageInfoUpsert.messages[0].message?.conversation;
-      if (!newMessage) {
-        newMessage =
-          messageInfoUpsert.messages[0].message?.extendedTextMessage?.text +
-          messageInfoUpsert.messages[0].message?.extendedTextMessage?.title;
+    try {
+      if (
+        messageInfoUpsert.messages[0].key.remoteJid.split("@")[1] === "g.us" &&
+        (messageInfoUpsert.messages[0].message?.conversation ||
+          messageInfoUpsert.messages[0].message?.extendedTextMessage?.text)
+      ) {
+        const user = await User.findById(id);
+        const tags = user.tags;
+        let newMessage = messageInfoUpsert.messages[0].message?.conversation;
+        if (!newMessage) {
+          newMessage =
+            messageInfoUpsert.messages[0].message?.extendedTextMessage?.text +
+            messageInfoUpsert.messages[0].message?.extendedTextMessage?.title;
+        }
+        const isRequiredMessage =
+          tags.length === 0
+            ? true
+            : tags.reduce((accum, curr) => {
+                if (accum) return accum;
+                else {
+                  const regex = new RegExp(curr, "i");
+                  console.log(accum, curr, newMessage);
+                  console.log(regex.test(newMessage));
+                  return regex.test(newMessage);
+                }
+              }, false);
+        console.log(isRequiredMessage);
+        const newGrpMessage = {
+          ...(messageInfoUpsert.messages[0].message?.extendedTextMessage
+            ?.title && {
+            title:
+              messageInfoUpsert.messages[0].message?.extendedTextMessage?.title,
+          }),
+          conversation:
+            messageInfoUpsert.messages[0].message?.conversation ||
+            messageInfoUpsert.messages[0].message?.extendedTextMessage?.text,
+          username: messageInfoUpsert.messages[0].pushName,
+          phoneNumber: messageInfoUpsert.messages[0].key.participant
+            .split("@")[0]
+            .slice(2),
+          timestamp: new Date(
+            messageInfoUpsert.messages[0].messageTimestamp * 1000
+          ).toISOString(),
+        };
+        //   console.log(messageInfoUpsert.messages[0]);
+        if (isRequiredMessage) {
+          socket.emit("new message", newGrpMessage);
+          chatsCollection.insertOne(newGrpMessage);
+          console.log(newGrpMessage);
+        }
       }
-      const isRequiredMessage =
-        tags.length === 0
-          ? true
-          : tags.reduce((accum, curr) => {
-              if (accum) return accum;
-              else {
-                const regex = new RegExp(curr, "i");
-                console.log(accum, curr, newMessage);
-                console.log(regex.test(newMessage));
-                return regex.test(newMessage);
-              }
-            }, false);
-      console.log(isRequiredMessage);
-      const newGrpMessage = {
-        ...(messageInfoUpsert.messages[0].message?.extendedTextMessage
-          ?.title && {
-          title:
-            messageInfoUpsert.messages[0].message?.extendedTextMessage?.title,
-        }),
-        conversation:
-          messageInfoUpsert.messages[0].message?.conversation ||
-          messageInfoUpsert.messages[0].message?.extendedTextMessage?.text,
-        username: messageInfoUpsert.messages[0].pushName,
-        phoneNumber: messageInfoUpsert.messages[0].key.participant
-          .split("@")[0]
-          .slice(2),
-        timestamp: new Date(
-          messageInfoUpsert.messages[0].messageTimestamp * 1000
-        ).toISOString(),
-      };
-      //   console.log(messageInfoUpsert.messages[0]);
-      if (isRequiredMessage) {
-        socket.emit("new message", newGrpMessage);
-        chatsCollection.insertOne(newGrpMessage);
-        console.log(newGrpMessage);
-      }
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -342,6 +364,11 @@ app.post("/api/tag/del", verifyAccessToken, async (req, res, next) => {
 process.on("exit", async () => {
   console.log("App exiting...");
   await User.updateMany({}, { $set: { isLogged: false } });
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  // Handle the error or terminate the process if necessary
 });
 
 io.on("connection", (socket) => {
