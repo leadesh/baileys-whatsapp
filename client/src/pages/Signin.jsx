@@ -55,15 +55,13 @@ const SignIn = () => {
           disabled={isPending}
           className='p-3 rounded-[32px] text-white uppercase font-bold disabled:opacity-80 transition duration-300 shadow hover:shadow-lg hover:opacity-95 bg-teal-600 hover:bg-teal-700'
         >
-          Submit
+          {isPending ? "Signing in..." : "Submit"}
         </button>
       </form>
       <div className='flex gap-2 mt-2'>
         <p>{"Don't have an account?"}</p>
         <Link to={"/signup"}>
-          <span className='text-blue-700'>
-            {isPending ? "Signing up..." : "Sign up"}
-          </span>
+          <span className='text-blue-700'>Sign up</span>
         </Link>
       </div>
     </div>
