@@ -25,11 +25,14 @@ mongoConnection();
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(cors());
 app.use(express.static(path.join(__dirname, "client", "dist")));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: "http://localhost:3000",
+  cors: {
+    origin: "*",
+  },
 });
 
 const mongoClient = new MongoClient(process.env.mongodb_url, {
@@ -244,6 +247,7 @@ async function connectionLogic(id, socket, isError) {
 }
 
 app.get("/", (req, res) => {
+  console.log("request received");
   res.status(200).json("Hey this is done");
 });
 
