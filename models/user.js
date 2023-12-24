@@ -4,8 +4,7 @@ const bcrypt = require("bcryptjs");
 const userSchema = new Schema({
   name: {
     type: String,
-    reuired: true,
-    unique: true,
+    required: true,
   },
   password: {
     type: String,
@@ -14,6 +13,7 @@ const userSchema = new Schema({
   number: {
     type: Number,
     required: true,
+    unique: true,
   },
   isLogged: {
     type: Boolean,
