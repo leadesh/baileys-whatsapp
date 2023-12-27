@@ -25,10 +25,11 @@ const { signAccessToken, verifyAccessToken } = require("./helper/jwt_helper");
 const {
   createSignUpValidation,
   createSignInValidation,
+  passwordValidation,
 } = require("./validation/user.validity");
 const MyError = require("./config/error");
 const useMongoDBAuthState = require("./auth/mongoAuthState");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 const { default: mongoose } = require("mongoose");
 
 mongoConnection();
@@ -121,7 +122,6 @@ async function connectionLogic(id, socket, isError) {
     } else {
       sock[id].ev.removeAllListeners("messages.upsert");
       sock[id].ev.removeAllListeners("connection.update");
-      sock[id].ev.removeAllListeners("creds.update");
     }
   } catch (error) {
     console.error(error);
@@ -254,8 +254,15 @@ async function connectionLogic(id, socket, isError) {
         };
         //   console.log(messageInfoUpsert.messages[0]);
         if (isRequiredMessage) {
-          socket.emit("new message", newGrpMessage);
-          chatsCollection.insertOne(newGrpMessage);
+          const { insertedId } = await chatsCollection.insertOne({
+            ...newGrpMessage,
+            isStarred: false,
+          });
+          socket.emit("new message", {
+            ...newGrpMessage,
+            isStarred: false,
+            _id: insertedId.toString(),
+          });
           console.log(newGrpMessage);
         }
       }
@@ -352,6 +359,7 @@ app.post("/api/logout", (req, res) => {
 app.get("/api/refreshMessages", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
+    console.log(data);
     const chatsCollection = mongoClient
       .db("whatsapp_chats")
       .collection(`all_chats_${data.id}`);
@@ -408,6 +416,66 @@ app.post("/api/tag/del", verifyAccessToken, async (req, res, next) => {
 //   connectionLogic(data.id);
 //   res.status(200).json("Server created");
 // });
+
+app.post("/api/message/star/:id", verifyAccessToken, async (req, res, next) => {
+  try {
+    const messageId = req.params.id;
+    const data = req.data;
+    const chatsCollection = mongoClient
+      .db("whatsapp_chats")
+      .collection(`all_chats_${data.id}`);
+
+    const updated = await chatsCollection.updateOne(
+      { _id: new ObjectId(messageId) },
+      [{ $set: { isStarred: { $not: "$isStarred" } } }]
+    );
+
+    res.status(200).json("chat status changed");
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/message/star", verifyAccessToken, async (req, res, next) => {
+  try {
+    const data = req.data;
+
+    const chatsCollection = mongoClient
+      .db("whatsapp_chats")
+      .collection(`all_chats_${data.id}`);
+
+    const allStarredMessages = await chatsCollection
+      .find({ isStarred: true })
+      .toArray();
+
+    res.status(200).json(allStarredMessages);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/password", verifyAccessToken, async (req, res, next) => {
+  try {
+    const data = req.data;
+    const { oldPassword, newPassword } = req.body;
+    console.log(data.number, oldPassword);
+    await passwordValidation.validateAsync(oldPassword);
+    await passwordValidation.validateAsync(newPassword);
+
+    const validUser = await User.checkUser(data.number, oldPassword);
+    if (!validUser) throw new MyError("Invalid phone number or password");
+
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const newUser = await User.findByIdAndUpdate(data.id, {
+      $set: { password: newHashedPassword },
+    });
+
+    res.status(200).json(newUser);
+  } catch (error) {
+    next(error);
+  }
+});
 
 process.on("exit", async () => {
   console.log("App exiting...");

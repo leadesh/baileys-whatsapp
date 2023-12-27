@@ -48,3 +48,19 @@ exports.createSignInValidation = Joi.object({
         "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
     }),
 });
+
+exports.passwordValidation = Joi.string()
+  .min(8)
+  .pattern(
+    new RegExp(
+      "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]+$"
+    )
+  )
+  .required()
+  .messages({
+    "string.base": "Password must be a string",
+    "string.empty": "Password is required",
+    "string.min": "Password must be at least {{#limit}} characters long",
+    "string.pattern.base":
+      "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
+  });
