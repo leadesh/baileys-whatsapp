@@ -13,6 +13,10 @@ const userSchema = new Schema({
   number: {
     type: Number,
     required: true,
+    unique: [true, "Phone number already exist"],
+  },
+  referralCode: {
+    type: String,
     unique: true,
   },
   isLogged: {

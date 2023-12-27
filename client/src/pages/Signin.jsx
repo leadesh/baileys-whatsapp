@@ -57,6 +57,9 @@ const SignIn = () => {
         >
           {isPending ? "Signing in..." : "Submit"}
         </button>
+        {isError && (
+          <p className='text-red-600 text-sm'>{error.response.data.message}</p>
+        )}
       </form>
       <div className='flex gap-2 mt-2'>
         <p>{"Don't have an account?"}</p>

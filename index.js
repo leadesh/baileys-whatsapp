@@ -3,6 +3,10 @@ const { DisconnectReason, Browsers } = require("@whiskeysockets/baileys");
 const makeWASocket = require("@whiskeysockets/baileys").default;
 const express = require("express");
 const app = express();
+let referralCodes;
+import("referral-codes").then((referralCode) => {
+  referralCodes = referralCode;
+});
 const { Server } = require("socket.io");
 const http = require("http");
 const cors = require("cors");
@@ -12,6 +16,11 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const User = require("./models/user");
 const path = require("path");
+const admin = require("firebase-admin");
+const serviceAccount = require("./path/to/your/firebase-credentials.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 const { signAccessToken, verifyAccessToken } = require("./helper/jwt_helper");
 const {
   createSignUpValidation,
@@ -20,6 +29,7 @@ const {
 const MyError = require("./config/error");
 const useMongoDBAuthState = require("./auth/mongoAuthState");
 const { MongoClient } = require("mongodb");
+const { default: mongoose } = require("mongoose");
 
 mongoConnection();
 app.use(cookieParser());
@@ -68,6 +78,23 @@ async function generateQRCode(data) {
   });
 }
 
+async function generateRandomString() {
+  const randomCode = referralCodes.generate({
+    length: 6,
+    count: 1,
+    charset: referralCodes.charset("alphanumeric"),
+  })[0];
+
+  const uniqueCode = await User.findOne({ referralCode: randomCode });
+  if (uniqueCode) {
+    // Generate a new number if it is not unique
+    return generateRandomString();
+  }
+
+  // Return the unique number
+  return randomCode;
+}
+
 async function connectionLogic(id, socket, isError) {
   // const { state, saveCreds } = await useMultiFileAuthState("auth_info_baileys");
   const user = await User.findById(id);
@@ -94,6 +121,7 @@ async function connectionLogic(id, socket, isError) {
     } else {
       sock[id].ev.removeAllListeners("messages.upsert");
       sock[id].ev.removeAllListeners("connection.update");
+      sock[id].ev.removeAllListeners("creds.update");
     }
   } catch (error) {
     console.error(error);
@@ -255,11 +283,23 @@ app.post("/api/signup", async (req, res, next) => {
   try {
     await createSignUpValidation.validateAsync(req.body);
     const { name, password, number } = req.body;
+    const isUser = await admin.auth().getUserByPhoneNumber(number);
+    if (!isUser) {
+      return res.status(401).json("Phone number has not been authenticated");
+    }
+
+    const newGeneratedCode = await generateRandomString(6);
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, password: hashedPassword, number });
+    const newUser = new User({
+      name,
+      password: hashedPassword,
+      number,
+      referralCode: newGeneratedCode,
+    });
     await newUser.save();
     const token = await signAccessToken(newUser.id);
     const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
+    res.setHeader("jwt", token);
     res.cookie("jwt", token, {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
@@ -283,17 +323,21 @@ app.post("/api/signin", async (req, res, next) => {
   try {
     await createSignInValidation.validateAsync(req.body);
     const { number, password } = req.body;
+    const isUser = await admin.auth().getUserByPhoneNumber(number);
+    if (!isUser) {
+      return res.status(401).json("Phone number has not been authenticated");
+    }
     console.log(number, password);
     const validUser = await User.checkUser(number, password);
 
     if (!validUser) throw new MyError("Invalid phone number or password");
     const token = await signAccessToken(validUser.id);
     const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
+    res.setHeader("jwt", token);
     res.cookie("jwt", token, {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
     });
-
     res.status(200).json(validUser);
   } catch (error) {
     next(error);
