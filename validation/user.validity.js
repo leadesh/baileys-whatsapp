@@ -21,7 +21,7 @@ exports.createSignUpValidation = Joi.object({
     .messages({
       "string.base": "Password must be a string",
       "string.empty": "Password is required",
-      "string.min": "Password must be at least {{#limit}} characters long",
+      "string.min": "Password must be at least 8 characters long",
       "string.pattern.base":
         "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
     }),
@@ -43,7 +43,7 @@ exports.createSignInValidation = Joi.object({
     .messages({
       "string.base": "Password must be a string",
       "string.empty": "Password is required",
-      "string.min": "Password must be at least {{#limit}} characters long",
+      "string.min": "Password must be at least 8 characters long",
       "string.pattern.base":
         "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
     }),
@@ -60,7 +60,13 @@ exports.passwordValidation = Joi.string()
   .messages({
     "string.base": "Password must be a string",
     "string.empty": "Password is required",
-    "string.min": "Password must be at least {{#limit}} characters long",
+    "string.min": "Password must be at least 8 characters long",
     "string.pattern.base":
       "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
   });
+
+exports.tagValidation = Joi.string().max(25).required().messages({
+  "string.base": "Tag must be a string",
+  "string.empty": "Tag is required",
+  "string.max": "Tag is more than 25 characters long",
+});

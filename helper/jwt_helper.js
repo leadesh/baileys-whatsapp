@@ -32,6 +32,7 @@ exports.verifyAccessToken = (req, res, next) => {
     }
     req.userId = payload.aud;
     User.findById(req.userId)
+      .populate("packageSelected")
       .then((data) => {
         if (data) {
           req.data = data;

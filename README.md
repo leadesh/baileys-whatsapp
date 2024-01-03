@@ -5,10 +5,9 @@
 
 2. APIs description
 
-- Hit the registeration API "/api/signup" after performing phone number based otp authentication using firebase.
+- Hit the registeration API "/api/signup" after performing phone number based otp authentication using firebase in the frontend.
   body = { name, password, number }
-- Hit the login API "/api/signin" after performing phone number based otp authentication using firebase.
-  body = { number, password }
+- Hit the login API "/api/signin" after performing phone number based otp authentication using firebase(or hit the endpoint directly if user has been authenticated with firebase beforehand). body = { number, password }
 - Implement this validation in front end before sending password values i.e Validate the password. The password should have 1 upper-case letter, 1 lower-case letter, 1 number, 1 special character and the password should be at least 8 characters.
 - Now if login or sigin is successful, server returns a token in a cookie which will be sent automatically with every request.
 - Make a socket connection to the backend server and call emit "whatsapp connect" with "id" of user to make a whatsapp socket.
@@ -28,8 +27,15 @@
 - If user has logout from whatsapp app forcefully than server emits "user disconnected" so that user can be logged out of the frontend.
 - Hit the endpoints get request "/api/refreshMessages" to get all messages from backend for the particular signed in user.(Authenticated request).
 - Hit the endpoint post request "/api/logout" to logout user from app.(Authenticated request).
-- Hit the endpoint post request "/api/tag/add" to add a new tag body will be { tag }.(Authenticated request).
-- Hit the endpoint post request "/api/tag/del" to delete a tag body will be { tag }.(Authenticated request).
+- Hit the endpoint post request "/api/tag/add" to add a new tag body will be { tag: <string> }.(Authenticated request).
+  integrated validation i.e. length of each keyword should not be more than 25 characters and Based on the Package chosen, he can add 10 or 25 keywords.
+- Hit the endpoint post request "/api/tag/edit/:id" to edit a tag body will be { tag: <string> }.(Authenticated request).
+- Hit the endpoint get request "/api/tag" to get all the tags related to a user.(Authenticated request). body will be
+  {
+  \_id,
+  value,
+  }
+- Hit the endpoint post request "/api/tag/del/:id" to delete a tag id is the id of the tag.(Authenticated request).
 - Hit the endpoint post request "/api/message/star/:id" here id of message to star a particular message.(Authenticated request).
 - Hit the endpoint get request "/api/message/star" to get all the user messages that are starred .(Authenticated request).
 - Hit the endpoint post request "/api/password" to change the password of the user where the body contains { oldPassword, newPassword }(Authenticated request).

@@ -31,6 +31,9 @@ const MyError = require("./config/error");
 const useMongoDBAuthState = require("./auth/mongoAuthState");
 const { MongoClient, ObjectId } = require("mongodb");
 const { default: mongoose } = require("mongoose");
+const tagRouter = require("./routes/tag.route");
+const packageRouter = require("./routes/package.route");
+const Tag = require("./models/tag");
 
 mongoConnection();
 app.use(cookieParser());
@@ -38,6 +41,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, "client", "dist")));
+app.use("/api/tag", tagRouter);
+app.use("/api/package", packageRouter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -214,8 +219,8 @@ async function connectionLogic(id, socket, isError) {
         (messageInfoUpsert.messages[0].message?.conversation ||
           messageInfoUpsert.messages[0].message?.extendedTextMessage?.text)
       ) {
-        const user = await User.findById(id);
-        const tags = user.tags;
+        const allTags = await Tag.find({ owner: id });
+        const tags = allTags.map((tag) => tag.value);
         let newMessage = messageInfoUpsert.messages[0].message?.conversation;
         if (!newMessage) {
           newMessage =
@@ -297,13 +302,14 @@ app.post("/api/signup", async (req, res, next) => {
 
     const newGeneratedCode = await generateRandomString(6);
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
+    let newUser = new User({
       name,
       password: hashedPassword,
       number,
       referralCode: newGeneratedCode,
     });
     await newUser.save();
+    await newUser.populate("packageSelected");
     const token = await signAccessToken(newUser.id);
     const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
     res.setHeader("jwt", token);
@@ -375,37 +381,22 @@ app.get("/api/refreshMessages", verifyAccessToken, async (req, res, next) => {
   }
 });
 
-app.post("/api/tag/add", verifyAccessToken, async (req, res, next) => {
+app.post("/api/user", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
-    const { tag } = req.body;
-    const userTag = await User.findByIdAndUpdate(
+    const { username, newNumber } = req.body;
+    const isUser = await admin.auth().getUserByPhoneNumber(number);
+    if (!isUser) {
+      return res.status(401).json("Phone number has not been authenticated");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
       data.id,
-      { $addToSet: { tags: tag } },
+      { $set: { name: username, number: newNumber } },
       { new: true }
     );
-    if (userTag) {
-      return res.status(201).json(userTag);
-    } else {
-      return res.status(404).json("User not found");
-    }
-  } catch (error) {
-    next(error);
-  }
-});
 
-app.post("/api/tag/del", verifyAccessToken, async (req, res, next) => {
-  try {
-    const data = req.data;
-    const { tag: deleteTag } = req.body;
-    let user = await User.findById(data.id);
-
-    let tags = user.tags;
-    tags = tags.filter((tag) => tag !== deleteTag);
-    user.tags = tags;
-    await user.save();
-
-    res.status(200).json(user);
+    res.status(200).json(updatedUser);
   } catch (error) {
     next(error);
   }
@@ -469,7 +460,9 @@ app.post("/api/password", verifyAccessToken, async (req, res, next) => {
 
     const newUser = await User.findByIdAndUpdate(data.id, {
       $set: { password: newHashedPassword },
-    });
+    })
+      .populate("tags")
+      .populate("packageSelected");
 
     res.status(200).json(newUser);
   } catch (error) {
