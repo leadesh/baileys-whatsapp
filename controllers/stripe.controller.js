@@ -1,4 +1,6 @@
+const { response } = require("express");
 const Package = require("../models/package");
+const User = require("../models/user");
 
 const stripe = require("stripe")(
   "sk_test_51ORoqxSH7ZBVqRJpo1g3BjeqfzW254DjSaHPOMoDPDRYS5SoI3RJMZx0gfAdrOvLs2rI2u8ab0G3qIJ8qe3kNXkW00iHB6xj5K"
@@ -7,17 +9,6 @@ const stripe = require("stripe")(
 exports.startStripeSession = async (req, res, next) => {
   try {
     const { packageSelected } = req.data;
-
-    // const lineItems = packageSelected.map((product) => ({
-    //   price_data: {
-    //     currency: "inr",
-    //     product_data: {
-    //       name: product.name,
-    //     },
-    //     unit_amount: product.rate,
-    //   },
-    //   quantity: 1,
-    // }));
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -72,7 +63,7 @@ exports.paymentSuccessHandler = async (req, res, next) => {
       });
       return res.status(200).json("Payment Successful");
     } else {
-      return res.status(200).json("Payment Failure");
+      return res.status(400).json("Payment Failure");
     }
   } catch (error) {
     next(error);
@@ -116,6 +107,30 @@ exports.webHookHandler = async (req, res) => {
   }
 
   res.sendStatus(200);
+};
+
+exports.cancelSubscription = async (req, res, next) => {
+  try {
+    const { packageSelected } = req.data;
+
+    if (
+      !packageSelected?.subscriptionId ||
+      packageSelected.subscriptionStatus !== "paid"
+    ) {
+      return res.status(404).json({ message: "No subscription to cancel" });
+    }
+
+    const subscription = await stripe.subscriptions.cancel(
+      packageSelected.subscriptionId
+    );
+
+    await Package.findByIdAndDelete(packageSelected.id);
+    const user = await User.findById(req.data.id);
+
+    res.status(200).json(user);
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.createPortalHandler = async (req, res, next) => {

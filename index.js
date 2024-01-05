@@ -336,7 +336,7 @@ app.post("/api/signup", async (req, res, next) => {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
     });
-    res.status(201).json(newUser);
+    res.status(201).json({ ...newUser._doc, jwt: token });
   } catch (error) {
     next(error);
   }
@@ -346,7 +346,8 @@ app.get("/api/getMe", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
     console.log(data);
-    res.status(200).json(data);
+    const token = req.cookies.jwt;
+    res.status(200).json({ ...data._doc, jwt: token });
   } catch (error) {
     next(error);
   }
@@ -372,7 +373,7 @@ app.post("/api/signin", async (req, res, next) => {
       maxAge: maxAgeInSeconds,
       sameSite: "none",
     });
-    res.status(200).json(validUser);
+    res.status(200).json({ ...validUser._doc, jwt: token });
   } catch (error) {
     next(error);
   }
@@ -417,7 +418,7 @@ app.post("/api/user", verifyAccessToken, async (req, res, next) => {
       data.id,
       { $set: { name: username, number: newNumber } },
       { new: true }
-    );
+    ).populate("packageSelected");
 
     res.status(200).json(updatedUser);
   } catch (error) {
@@ -464,6 +465,49 @@ app.get("/api/message/star", verifyAccessToken, async (req, res, next) => {
       .toArray();
 
     res.status(200).json(allStarredMessages);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/dashboard", verifyAccessToken, async (req, res, next) => {
+  try {
+    const { packageSelected } = req.data;
+    const userId = req.data.id;
+
+    const chatsCollection = mongoClient
+      .db("whatsapp_chats")
+      .collection(`all_chats_${userId}`);
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todayMessages = await chatsCollection
+      .find({
+        timestamp: {
+          $gte: todayStart.toISOString(),
+          $lte: todayEnd.toISOString(),
+        },
+      })
+      .size();
+
+    const totalMessages = await chatsCollection.find({}).size();
+
+    const totalStarredMessages = await chatsCollection
+      .find({ isStarred: true })
+      .size();
+
+    res.status(200).json({
+      trialEndData: packageSelected.trialPeriodEndTime,
+      subscribedPackage: packageSelected.name,
+      totalKeywords: packageSelected.maxKeyword,
+      todayTotalMessages: todayMessages,
+      totalMessages,
+      totalStarredMessages,
+    });
   } catch (error) {
     next(error);
   }
