@@ -10,6 +10,9 @@ exports.createSignUpValidation = Joi.object({
     "number.base": "Phone number must be a number",
     "number.empty": "Phone number is required",
   }),
+  referralCode: Joi.string().messages({
+    "string.base": "Referral Code must be a string",
+  }),
   password: Joi.string()
     .min(8)
     .pattern(

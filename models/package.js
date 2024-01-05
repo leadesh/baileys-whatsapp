@@ -9,6 +9,20 @@ const packageSchema = new Schema({
     type: Number,
     required: true,
   },
+  subscriptionStatus: {
+    type: String,
+    required: true,
+    default: "trialPeriod",
+  },
+  sessionId: {
+    type: String,
+  },
+  customerId: {
+    type: String,
+  },
+  subscriptionId: {
+    type: String,
+  },
   maxKeyword: {
     type: Number,
     required: true,

@@ -33,16 +33,18 @@ const { MongoClient, ObjectId } = require("mongodb");
 const { default: mongoose } = require("mongoose");
 const tagRouter = require("./routes/tag.route");
 const packageRouter = require("./routes/package.route");
+const stripeRouter = require("./routes/stripe.route");
 const Tag = require("./models/tag");
 
 mongoConnection();
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(cors());
+app.use(cors({ credentials: true, exposedHeaders: ["set-cookie"] }));
 app.use(express.static(path.join(__dirname, "client", "dist")));
 app.use("/api/tag", tagRouter);
 app.use("/api/package", packageRouter);
+app.use("/api/stripe", stripeRouter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -294,11 +296,22 @@ app.get("/", (req, res) => {
 app.post("/api/signup", async (req, res, next) => {
   try {
     await createSignUpValidation.validateAsync(req.body);
-    const { name, password, number } = req.body;
-    const isUser = await admin.auth().getUserByPhoneNumber(number);
-    if (!isUser) {
-      return res.status(401).json("Phone number has not been authenticated");
+    const { name, password, number, referralCode } = req.body;
+    // const isUser = await admin.auth().getUserByPhoneNumber(number);
+    // if (!isUser) {
+    //   return res.status(401).json("Phone number has not been authenticated");
+    // }
+
+    let referredUser = false;
+
+    if (referralCode?.trim().length > 0) {
+      referredUser = await User.findOne({ referralCode });
+      if (!referredUser) {
+        res.status(422).json("Invalid referral code");
+      }
     }
+
+    const referralInfo = referredUser ? [referredUser.id] : [];
 
     const newGeneratedCode = await generateRandomString(6);
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -307,9 +320,15 @@ app.post("/api/signup", async (req, res, next) => {
       password: hashedPassword,
       number,
       referralCode: newGeneratedCode,
+      referrals: referralInfo,
     });
     await newUser.save();
     await newUser.populate("packageSelected");
+
+    if (referredUser) {
+      referredUser.referrals = referredUser.referrals.concat(newUser.id);
+      await referredUser.save();
+    }
     const token = await signAccessToken(newUser.id);
     const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
     res.setHeader("jwt", token);
@@ -326,6 +345,7 @@ app.post("/api/signup", async (req, res, next) => {
 app.get("/api/getMe", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
+    console.log(data);
     res.status(200).json(data);
   } catch (error) {
     next(error);
@@ -350,6 +370,7 @@ app.post("/api/signin", async (req, res, next) => {
     res.cookie("jwt", token, {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
+      sameSite: "none",
     });
     res.status(200).json(validUser);
   } catch (error) {
@@ -385,9 +406,11 @@ app.post("/api/user", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
     const { username, newNumber } = req.body;
-    const isUser = await admin.auth().getUserByPhoneNumber(number);
-    if (!isUser) {
-      return res.status(401).json("Phone number has not been authenticated");
+    if (newNumber && newNumber.trim().length > 0) {
+      const isUser = await admin.auth().getUserByPhoneNumber(newNumber);
+      if (!isUser) {
+        return res.status(401).json("Phone number has not been authenticated");
+      }
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -399,6 +422,7 @@ app.post("/api/user", verifyAccessToken, async (req, res, next) => {
     res.status(200).json(updatedUser);
   } catch (error) {
     next(error);
+    console.log(error);
   }
 });
 

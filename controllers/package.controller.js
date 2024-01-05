@@ -55,6 +55,9 @@ exports.checkTrialPeriod = async (req, res, next) => {
     if (!packageSelected) throw new Error("Package not found to check");
     const currentTime = new Date();
     if (isAfter(currentTime, packageSelected.trialPeriodEndTime)) {
+      await Package.findByIdAndUpdate(packageSelected.id, {
+        $set: { subscriptionStatus: "trialEnded" },
+      });
       res
         .status(403)
         .json(
