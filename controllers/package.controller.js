@@ -9,6 +9,10 @@ exports.addNewPackage = async (req, res, next) => {
     const todayTime = new Date();
     const startTime = todayTime.toISOString();
 
+    if (data?.packageSelected) {
+      await Package.findByIdAndDelete(data.packageSelected.id);
+    }
+
     let trialPeriodEndTime = new Date(todayTime);
     trialPeriodEndTime = addDays(trialPeriodEndTime, 7);
     const currentUser = await User.findById(data.id);

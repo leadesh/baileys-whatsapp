@@ -335,6 +335,8 @@ app.post("/api/signup", async (req, res, next) => {
     res.cookie("jwt", token, {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
+      sameSite: "none",
+      secure: true,
     });
     res.status(201).json({ ...newUser._doc, jwt: token });
   } catch (error) {
@@ -372,6 +374,7 @@ app.post("/api/signin", async (req, res, next) => {
       httpOnly: true,
       maxAge: maxAgeInSeconds,
       sameSite: "none",
+      secure: true,
     });
     res.status(200).json({ ...validUser._doc, jwt: token });
   } catch (error) {
