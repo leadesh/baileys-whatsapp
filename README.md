@@ -40,3 +40,10 @@
 - Hit the endpoint get request "/api/message/star" to get all the user messages that are starred .(Authenticated request).
 - Hit the endpoint post request "/api/password" to change the password of the user where the body contains { oldPassword, newPassword }(Authenticated request).
   Here oldPassword and newPassword validate this info . The password should have 1 upper-case letter, 1 lower-case letter, 1 number, 1 special character and the password should be at least 8 characters.
+
+  Admin Api
+
+- First register the user with credentials now add a string "admin" to roles array of users.
+- Now login the user with admin role access to access the admin api.
+- /api/admin/users to get all the registered users and its required information.
+- /api/admin/transactions to get all the selected packages and get the information if the user's package is paid or in trial period by the field returned named "subscriptionStatus".

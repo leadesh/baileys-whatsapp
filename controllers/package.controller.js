@@ -1,7 +1,7 @@
 const Package = require("../models/package");
 const User = require("../models/user");
 const allPackages = require("../packages/allPackages.json");
-const { addDays, addMonths, isAfter, parseISO } = require("date-fns");
+const { addDays, isAfter, parseISO } = require("date-fns");
 
 exports.addNewPackage = async (req, res, next) => {
   try {
@@ -17,8 +17,6 @@ exports.addNewPackage = async (req, res, next) => {
     trialPeriodEndTime = addDays(trialPeriodEndTime, 7);
     const currentUser = await User.findById(data.id);
 
-    let endDate = new Date(todayTime);
-    endDate = addMonths(endDate, 1);
     const { package } = req.body;
     let newPackage;
     if (package === "Basic") {
@@ -26,14 +24,12 @@ exports.addNewPackage = async (req, res, next) => {
         ...allPackages[0],
         startTime,
         trialPeriodEndTime: trialPeriodEndTime.toISOString(),
-        endDate: endDate.toISOString(),
       });
     } else {
       newPackage = new Package({
         ...allPackages[1],
         startTime,
         trialPeriodEndTime: trialPeriodEndTime.toISOString(),
-        endDate: endDate.toISOString(),
       });
     }
 

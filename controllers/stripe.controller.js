@@ -1,6 +1,7 @@
 const { response } = require("express");
 const Package = require("../models/package");
 const User = require("../models/user");
+const { addMonths } = require("date-fns");
 
 const stripe = require("stripe")(
   "sk_test_51ORoqxSH7ZBVqRJpo1g3BjeqfzW254DjSaHPOMoDPDRYS5SoI3RJMZx0gfAdrOvLs2rI2u8ab0G3qIJ8qe3kNXkW00iHB6xj5K"
@@ -83,12 +84,14 @@ exports.webHookHandler = async (req, res) => {
     return;
   }
 
+  let userId;
+
   switch (eventType) {
     case "checkout.session.completed":
       // Payment is successful and the subscription is created.
       // You should provision the subscription and save the customer ID to your database.
       const customerId = event.data.object.customer;
-      const userId = event.data.object.metadata.userId;
+      userId = event.data.object.metadata.userId;
 
       await Package.findByIdAndUpdate(userId, { customerId });
       break;
@@ -96,6 +99,18 @@ exports.webHookHandler = async (req, res) => {
       // Continue to provision the subscription as payments continue to be made.
       // Store the status in your database and check when a user accesses your service.
       // This approach helps you avoid hitting rate limits.
+      userId = event.data.object.metadata.userId;
+      const package = await Package.findById(userId);
+
+      const todayTime = new Date();
+      const startTime = todayTime.toISOString();
+
+      package.startTime = startTime;
+
+      let endDate = new Date(todayTime);
+      endDate = addMonths(endDate, 1);
+      package.endDate = endDate;
+      await package.save();
       break;
     case "invoice.payment_failed":
       // The payment failed or the customer does not have a valid payment method.

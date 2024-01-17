@@ -30,10 +30,10 @@ const {
 const MyError = require("./config/error");
 const useMongoDBAuthState = require("./auth/mongoAuthState");
 const { MongoClient, ObjectId } = require("mongodb");
-const { default: mongoose } = require("mongoose");
 const tagRouter = require("./routes/tag.route");
 const packageRouter = require("./routes/package.route");
 const stripeRouter = require("./routes/stripe.route");
+const adminRouter = require("./routes/admin.route");
 const Tag = require("./models/tag");
 
 mongoConnection();
@@ -45,6 +45,7 @@ app.use(express.static(path.join(__dirname, "client", "dist")));
 app.use("/api/tag", tagRouter);
 app.use("/api/package", packageRouter);
 app.use("/api/stripe", stripeRouter);
+app.use("/api/admin", adminRouter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
