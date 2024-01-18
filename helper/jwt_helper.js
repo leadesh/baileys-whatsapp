@@ -18,11 +18,16 @@ exports.signAccessToken = (userId) => {
 };
 
 exports.verifyAccessToken = (req, res, next) => {
-  if (!req?.cookies.jwt)
+  let token = req?.cookies?.jwt;
+
+  if (!token) {
+    token = req.headers["jwt"];
+  }
+
+  if (!token)
     return res
       .status(401)
       .json({ status: 401, message: "Access Token is required" });
-  const token = req.cookies.jwt;
 
   JWT.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, payload) => {
     if (err) {
