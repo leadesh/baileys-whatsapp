@@ -13,8 +13,9 @@ exports.addTokenHandler = async (req, res, next) => {
       { $match: { owner: data._id } },
       { $group: { _id: null, count: { $count: {} } } },
     ]);
-    console.log(data.packageSelected.maxKeyword, tagsLength[0].count);
-    if (data.packageSelected.maxKeyword <= tagsLength[0].count) {
+    const totalTags = tagsLength[0]?.count | 0;
+    console.log(data.packageSelected.maxKeyword, totalTags);
+    if (data.packageSelected.maxKeyword <= totalTags) {
       return res.status(403).json("Keyword limit reached for the user");
     }
 
