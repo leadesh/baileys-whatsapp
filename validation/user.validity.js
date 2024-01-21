@@ -73,3 +73,24 @@ exports.tagValidation = Joi.string().max(25).required().messages({
   "string.empty": "Tag is required",
   "string.max": "Tag is more than 25 characters long",
 });
+
+exports.createMessageValidation = Joi.object({
+  conversation: Joi.string().required().messages({
+    "string.base": "Message must be a string",
+    "string.empty": "Message is required",
+  }),
+  groupName: Joi.string().messages({
+    "string.base": "Group name must be a string",
+  }),
+  senderName: Joi.string().required().messages({
+    "string.base": "sender name must be a string",
+    "string.empty": "Sender name is required",
+  }),
+  senderNumber: Joi.number().messages({
+    "number.base": "sender name must be a number",
+  }),
+  messageTimeStamp: Joi.string().required().messages({
+    "string.base": "message timestamp must be a string",
+    "string.empty": "message timestamp name is required",
+  }),
+});

@@ -26,6 +26,7 @@ const {
   createSignUpValidation,
   createSignInValidation,
   passwordValidation,
+  createMessageValidation,
 } = require("./validation/user.validity");
 const MyError = require("./config/error");
 const useMongoDBAuthState = require("./auth/mongoAuthState");
@@ -469,6 +470,23 @@ app.get("/api/message/star", verifyAccessToken, async (req, res, next) => {
       .toArray();
 
     res.status(200).json(allStarredMessages);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/message", verifyAccessToken, async (req, res, next) => {
+  try {
+    const data = req.data;
+    await createMessageValidation.validateAsync(req.body);
+
+    const chatsCollection = mongoClient
+      .db("whatsapp_chats")
+      .collection(`all_chats_${data.id}`);
+
+    const { insertedId } = await chatsCollection.insertOne(req.body);
+
+    req.status(200).json({ ...req.body, id: insertedId });
   } catch (error) {
     next(error);
   }
