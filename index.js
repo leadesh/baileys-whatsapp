@@ -36,6 +36,7 @@ const packageRouter = require("./routes/package.route");
 const stripeRouter = require("./routes/stripe.route");
 const adminRouter = require("./routes/admin.route");
 const Tag = require("./models/tag");
+const Message = require("./models/message");
 
 mongoConnection();
 app.use(cookieParser());
@@ -263,15 +264,10 @@ async function connectionLogic(id, socket, isError) {
         };
         //   console.log(messageInfoUpsert.messages[0]);
         if (isRequiredMessage) {
-          const { insertedId } = await chatsCollection.insertOne({
-            ...newGrpMessage,
-            isStarred: false,
-          });
-          socket.emit("new message", {
-            ...newGrpMessage,
-            isStarred: false,
-            _id: insertedId.toString(),
-          });
+          const newMessage = new Message({ ...newGrpMessage, userId: id });
+          await newMessage.save();
+
+          socket.emit("new message", newMessage);
           console.log(newGrpMessage);
         }
       }
@@ -393,15 +389,11 @@ app.get("/api/refreshMessages", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
     console.log(data);
-    const chatsCollection = mongoClient
-      .db("whatsapp_chats")
-      .collection(`all_chats_${data.id}`);
 
-    const messages = await chatsCollection
-      .find({})
+    const messages = await Message.find({ userId: data.id })
       .sort({ timestamp: -1 })
-      .limit(20)
-      .toArray();
+      .limit(20);
+
     res.status(200).json(messages);
   } catch (error) {
     next(error);
@@ -442,16 +434,16 @@ app.post("/api/message/star/:id", verifyAccessToken, async (req, res, next) => {
   try {
     const messageId = req.params.id;
     const data = req.data;
-    const chatsCollection = mongoClient
-      .db("whatsapp_chats")
-      .collection(`all_chats_${data.id}`);
 
-    const updated = await chatsCollection.updateOne(
-      { _id: new ObjectId(messageId) },
-      [{ $set: { isStarred: { $not: "$isStarred" } } }]
+    const updatedOne = await Message.findByIdAndUpdate(
+      messageId,
+      [{ $set: { isStarred: { $not: "$isStarred" } } }],
+      { new: true }
     );
 
-    res.status(200).json("chat status changed");
+    res
+      .status(200)
+      .json({ message: "chat status changed", updatedMessage: updatedOne });
   } catch (error) {
     next(error);
   }
@@ -465,9 +457,7 @@ app.get("/api/message/star", verifyAccessToken, async (req, res, next) => {
       .db("whatsapp_chats")
       .collection(`all_chats_${data.id}`);
 
-    const allStarredMessages = await chatsCollection
-      .find({ isStarred: true })
-      .toArray();
+    const allStarredMessages = await Message.find({ isStarred: true });
 
     res.status(200).json(allStarredMessages);
   } catch (error) {
@@ -480,13 +470,10 @@ app.post("/api/message", verifyAccessToken, async (req, res, next) => {
     const data = req.data;
     await createMessageValidation.validateAsync(req.body);
 
-    const chatsCollection = mongoClient
-      .db("whatsapp_chats")
-      .collection(`all_chats_${data.id}`);
+    const newMessage = new Message({ ...req.body, userId: data.id });
+    await newMessage.save();
 
-    const { insertedId } = await chatsCollection.insertOne(req.body);
-
-    req.status(200).json({ ...req.body, id: insertedId });
+    req.status(200).json(newMessage);
   } catch (error) {
     next(error);
   }
@@ -497,30 +484,23 @@ app.get("/api/dashboard", verifyAccessToken, async (req, res, next) => {
     const { packageSelected } = req.data;
     const userId = req.data.id;
 
-    const chatsCollection = mongoClient
-      .db("whatsapp_chats")
-      .collection(`all_chats_${userId}`);
-
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const todayMessages = await chatsCollection
-      .find({
-        timestamp: {
-          $gte: todayStart.toISOString(),
-          $lte: todayEnd.toISOString(),
-        },
-      })
-      .size();
+    const todayMessages = await Message.find({
+      userId,
+      timestamp: {
+        $gte: todayStart.toISOString(),
+        $lte: todayEnd.toISOString(),
+      },
+    }).size();
 
-    const totalMessages = await chatsCollection.find({}).size();
+    const totalMessages = await Message.find({ userId }).size();
 
-    const totalStarredMessages = await chatsCollection
-      .find({ isStarred: true })
-      .size();
+    const totalStarredMessages = await Message.find({ isStarred: true }).size();
 
     res.status(200).json({
       trialEndData: packageSelected.trialPeriodEndTime,
