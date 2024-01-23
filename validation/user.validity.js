@@ -86,8 +86,8 @@ exports.createMessageValidation = Joi.object({
     "string.base": "sender name must be a string",
     "string.empty": "Sender name is required",
   }),
-  phoneNumber: Joi.number().messages({
-    "number.base": "sender name must be a number",
+  phoneNumber: Joi.string().messages({
+    "string.base": "sender number must be a string",
   }),
   timestamp: Joi.string().required().messages({
     "string.base": "message timestamp must be a string",
