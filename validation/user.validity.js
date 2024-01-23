@@ -82,11 +82,11 @@ exports.createMessageValidation = Joi.object({
   groupName: Joi.string().messages({
     "string.base": "Group name must be a string",
   }),
-  senderName: Joi.string().required().messages({
+  username: Joi.string().required().messages({
     "string.base": "sender name must be a string",
     "string.empty": "Sender name is required",
   }),
-  senderNumber: Joi.number().messages({
+  phoneNumber: Joi.number().messages({
     "number.base": "sender name must be a number",
   }),
   timestamp: Joi.string().required().messages({
