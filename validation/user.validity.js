@@ -82,7 +82,7 @@ exports.createMessageValidation = Joi.object({
   groupName: Joi.string().messages({
     "string.base": "Group name must be a string",
   }),
-  username: Joi.string().required().messages({
+  username: Joi.string().messages({
     "string.base": "sender name must be a string",
     "string.empty": "Sender name is required",
   }),

@@ -473,7 +473,7 @@ app.post("/api/message", verifyAccessToken, async (req, res, next) => {
     const newMessage = new Message({ ...req.body, userId: data.id });
     await newMessage.save();
 
-    req.status(200).json(newMessage);
+    res.status(200).json(newMessage);
   } catch (error) {
     next(error);
   }

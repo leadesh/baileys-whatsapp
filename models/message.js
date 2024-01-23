@@ -12,7 +12,6 @@ const messageSchema = new Schema({
   },
   phoneNumber: {
     type: Number,
-    required: true,
   },
   timestamp: {
     type: Date,
