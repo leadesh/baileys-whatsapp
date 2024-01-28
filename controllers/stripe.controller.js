@@ -11,6 +11,9 @@ exports.startStripeSession = async (req, res, next) => {
   try {
     const { packageSelected } = req.data;
 
+    if (!packageSelected)
+      throw new Error("First select package to make a payment request");
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [
@@ -53,6 +56,8 @@ exports.startStripeSession = async (req, res, next) => {
 exports.paymentSuccessHandler = async (req, res, next) => {
   try {
     const { packageSelected } = req.data;
+    if (!packageSelected)
+      throw new Error("First select package to make a payment request");
     const session = await stripe.checkout.sessions.retrieve(
       packageSelected.sessionId
     );

@@ -18,7 +18,7 @@ const userSchema = new Schema(
       default: ["user"],
     },
     number: {
-      type: Number,
+      type: String,
       required: true,
       unique: [true, "Phone number already exist"],
     },

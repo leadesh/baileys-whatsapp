@@ -5,6 +5,7 @@ const {
   startStripeSession,
   paymentSuccessHandler,
   createPortalHandler,
+  cancelSubscription,
 } = require("../controllers/stripe.controller");
 
 const router = express.Router();
@@ -18,5 +19,9 @@ router.route("/payment-success").post(verifyAccessToken, paymentSuccessHandler);
 router.route("/webhook").post(webHookHandler);
 
 router.route("/portal-creation").post(verifyAccessToken, createPortalHandler);
+
+router
+  .route("/cancel-subscription")
+  .post(verifyAccessToken, cancelSubscription);
 
 module.exports = router;

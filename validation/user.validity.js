@@ -94,3 +94,27 @@ exports.createMessageValidation = Joi.object({
     "string.empty": "message timestamp name is required",
   }),
 });
+
+exports.editPackageValidation = Joi.object({
+  id: Joi.number().required().messages({
+    "number.base": "id must be a number",
+    "number.empty": "id must be a number",
+    "any.required": "package id must be required",
+  }),
+  name: Joi.string().messages({
+    "string.base": "package name must be a string",
+    "string.empty": "package name must not be empty",
+  }),
+  rate: Joi.number().messages({
+    "number.base": "rate must be a number",
+    "number.empty": "rate must not be empty",
+  }),
+  maxKeyword: Joi.number().messages({
+    "number.base": "maxKeyword must be a number",
+    "number.empty": "maxKeyword must not be empty",
+  }),
+  trialPeriod: Joi.number().messages({
+    "number.base": "trialPeriod must be a number",
+    "number.empty": "trialPeriod must not be empty",
+  }),
+});

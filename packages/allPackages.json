@@ -1,14 +1,1 @@
-[
-  {
-    "name": "Basic",
-    "rate": 100,
-    "maxKeyword": 10,
-    "trialPeriod": 7
-  },
-  {
-    "name": "Pro",
-    "rate": 200,
-    "maxKeyword": 25,
-    "trialPeriod": 7
-  }
-]
+[{"id":1,"name":"Basic","rate":100,"maxKeyword":10,"trialPeriod":7},{"id":2,"name":"Pro","rate":200,"maxKeyword":25,"trialPeriod":7}]
