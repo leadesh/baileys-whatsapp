@@ -6,6 +6,8 @@ const Package = require("../models/package");
 const { readFile, writeFile } = require("fs/promises");
 const { editPackageValidation } = require("../validation/user.validity");
 const path = require("path");
+const MyError = require("../config/error");
+const { signAccessToken } = require("../helper/jwt_helper");
 
 exports.getAllUsers = async (req, res, next) => {
   try {
@@ -157,3 +159,34 @@ exports.getPackages = async (req, res, next) => {
     next(error);
   }
 };
+
+
+exports.login = async (req, res, next) => {
+  try {
+    console.log("hello");
+    const { email, password } = req.body;
+
+    console.log(email, password);
+    const validUser = await User.findOne({ email });
+
+    if (!validUser) throw new MyError("Invalid email or password");
+
+    const isCorrectPassword = await validUser.comparePassword(password);
+    if (!isCorrectPassword) {
+      throw new MyError("Invalid email or password");
+    }
+
+    const token = await signAccessToken(validUser.id);
+    const maxAgeInSeconds = 10 * 24 * 60 * 60 * 1000;
+    res.setHeader("jwt", token);
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      maxAge: maxAgeInSeconds,
+      sameSite: "none",
+      secure: true,
+    });
+    res.status(200).json({ ...validUser._doc, jwt: token });
+  } catch (error) {
+    next(error)
+  }
+}

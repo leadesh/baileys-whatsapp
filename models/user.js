@@ -60,6 +60,11 @@ userSchema.statics.checkUser = async function (number, password) {
   return isValid ? foundUser : false;
 };
 
+// compare password
+userSchema.methods.comparePassword = async function (loginPassword) {
+  return await bcrypt.compare(loginPassword, this.password);
+}
+
 const User = model("User", userSchema);
 
 module.exports = User;

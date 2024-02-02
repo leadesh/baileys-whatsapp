@@ -154,9 +154,9 @@ async function connectionLogic(id, socket, isError) {
       if (connection === "close") {
         const shouldReconnect =
           lastDisconnect?.error?.output?.statusCode !==
-            DisconnectReason.loggedOut &&
+          DisconnectReason.loggedOut &&
           lastDisconnect?.error?.output?.payload?.message !==
-            "QR refs attempts ended";
+          "QR refs attempts ended";
         console.log(
           "connection closed due to ",
           lastDisconnect.error,
@@ -236,14 +236,14 @@ async function connectionLogic(id, socket, isError) {
           tags.length === 0
             ? true
             : tags.reduce((accum, curr) => {
-                if (accum) return accum;
-                else {
-                  const regex = new RegExp(curr, "i");
-                  console.log(accum, curr, newMessage);
-                  console.log(regex.test(newMessage));
-                  return regex.test(newMessage);
-                }
-              }, false);
+              if (accum) return accum;
+              else {
+                const regex = new RegExp(curr, "i");
+                console.log(accum, curr, newMessage);
+                console.log(regex.test(newMessage));
+                return regex.test(newMessage);
+              }
+            }, false);
         console.log(isRequiredMessage);
         const newGrpMessage = {
           ...(messageInfoUpsert.messages[0].message?.extendedTextMessage

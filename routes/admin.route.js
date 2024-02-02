@@ -7,11 +7,19 @@ const {
   getAllMessages,
   editPackage,
   getPackages,
+  login,
 } = require("../controllers/admin.controller");
 
 const router = express.Router();
 
-router.use(verifyAccessToken);
+router.use((req, res, next) => {
+  if (req.path === '/login') {
+    return next();
+  }
+  verifyAccessToken(req, res, next);
+});
+
+// router.use(verifyAccessToken);
 
 router.route("/users").get(isAdmin, getAllUsers);
 
@@ -22,5 +30,7 @@ router.route("/allMessages").get(isAdmin, getAllMessages);
 router.route("/editPackage").post(isAdmin, editPackage);
 
 router.route("/packages").get(isAdmin, getPackages);
+
+router.route('/login').post(login);
 
 module.exports = router;
