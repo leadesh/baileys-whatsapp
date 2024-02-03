@@ -7,6 +7,9 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    email: {
+      type: String,
+    },
     password: {
       type: String,
       required: true,
@@ -41,6 +44,18 @@ const userSchema = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+
+
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    next();
+  }
+  this.password = await bcrypt.hash(this.password, 10);
+
+})
+
 
 userSchema.virtual("tags", {
   ref: "Tag",

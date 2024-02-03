@@ -2,6 +2,7 @@ require("dotenv").config();
 const { DisconnectReason, Browsers } = require("@whiskeysockets/baileys");
 const makeWASocket = require("@whiskeysockets/baileys").default;
 const express = require("express");
+const password = require('secure-random-password')
 const app = express();
 let referralCodes;
 import("referral-codes").then((referralCode) => {
@@ -14,6 +15,9 @@ const qrCode = require("qrcode");
 const mongoConnection = require("./db/dbConnect");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
+
+
+
 const User = require("./models/user");
 const path = require("path");
 const admin = require("firebase-admin");
@@ -37,6 +41,7 @@ const stripeRouter = require("./routes/stripe.route");
 const adminRouter = require("./routes/admin.route");
 const Tag = require("./models/tag");
 const Message = require("./models/message");
+const sendEmail = require("./sendEmail");
 
 mongoConnection();
 app.use(cookieParser());
@@ -62,7 +67,7 @@ const mongoClient = new MongoClient(process.env.mongodb_url, {
 });
 mongoClient.connect().then(() => console.log("mongoClient connected"));
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 const sock = {};
 
@@ -403,7 +408,7 @@ app.get("/api/refreshMessages", verifyAccessToken, async (req, res, next) => {
 app.post("/api/user", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
-    const { username, newNumber } = req.body;
+    const { username, newNumber, email } = req.body;
     if (newNumber && newNumber.trim().length > 0) {
       const isUser = await admin.auth().getUserByPhoneNumber(newNumber);
       if (!isUser) {
@@ -413,7 +418,7 @@ app.post("/api/user", verifyAccessToken, async (req, res, next) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       data.id,
-      { $set: { name: username, number: newNumber } },
+      { $set: { name: username, number: newNumber, email: email } },
       { new: true }
     ).populate("packageSelected");
 
@@ -430,6 +435,47 @@ app.post("/api/user", verifyAccessToken, async (req, res, next) => {
 //   res.status(200).json("Server created");
 // });
 
+app.post('/api/reseatPassword', async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    // console.log("req.body", req.body.email);
+    if (!user) {
+      return next(new ErrorHandler("user not found", 404));
+    }
+    const passwords = password.randomPassword({
+      length: 12,
+      characters: [
+        { characters: password.upper, exactly: 1 },
+        { characters: password.symbols, exactly: 1 },
+        password.lower,
+        password.digits]
+    })
+    console.log("password is ", passwords);
+    user.password = passwords;
+    await user.save()
+    console.log("email is : ", user);
+    const message = `Your Password is :-  ${passwords}  \n\nIf you have not requested this email then, please ignore it`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Leadesh Password Recovery",
+        message: message
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `Email sent to ${user.email} successfully`,
+      })
+    } catch (error) {
+      console.log(error);
+      next(error)
+    }
+  }
+  catch (error) {
+    next(error);
+  }
+})
 app.post("/api/message/star/:id", verifyAccessToken, async (req, res, next) => {
   try {
     const messageId = req.params.id;
@@ -515,17 +561,17 @@ app.get("/api/dashboard", verifyAccessToken, async (req, res, next) => {
   }
 });
 
+
 app.post("/api/password", verifyAccessToken, async (req, res, next) => {
   try {
     const data = req.data;
     const { oldPassword, newPassword } = req.body;
     console.log(data.number, oldPassword);
-    await passwordValidation.validateAsync(oldPassword);
-    await passwordValidation.validateAsync(newPassword);
+    // await passwordValidation.validateAsync(oldPassword);
+    // await passwordValidation.validateAsync(newPassword);
 
     const validUser = await User.checkUser(data.number, oldPassword);
     if (!validUser) throw new MyError("Invalid phone number or password");
-
     const newHashedPassword = await bcrypt.hash(newPassword, 10);
 
     const newUser = await User.findByIdAndUpdate(data.id, {

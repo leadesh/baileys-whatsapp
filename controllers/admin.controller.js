@@ -163,7 +163,7 @@ exports.getPackages = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    console.log("hello");
+    // console.log("hello");
     const { email, password } = req.body;
 
     console.log(email, password);
@@ -173,7 +173,7 @@ exports.login = async (req, res, next) => {
 
     const isCorrectPassword = await validUser.comparePassword(password);
     if (!isCorrectPassword) {
-      throw new MyError("Invalid email or password");
+      throw new MyError("Invalid email or passwordd");
     }
 
     const token = await signAccessToken(validUser.id);
